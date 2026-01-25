@@ -1,8 +1,5 @@
-# GEI - GoMaluum Entries Indexer
-# Multi-stage Docker build for optimized production image
-
 # Stage 1: Build stage
-FROM rust:1.75-slim as builder
+FROM rust:bookworm as builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
