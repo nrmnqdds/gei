@@ -50,7 +50,7 @@ ENV DATABASE_URL=sqlite:///var/lib/gei/schedules.db
 ENV RUST_LOG=info
 
 # Expose gRPC port
-EXPOSE 50051
+EXPOSE 50053
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

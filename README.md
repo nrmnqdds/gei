@@ -48,7 +48,7 @@ cargo build --release
 cargo run --bin gei-server
 ```
 
-The server will start on `0.0.0.0:50051` and create a `schedules.db` file in the current directory.
+The server will start on `0.0.0.0:50053` and create a `schedules.db` file in the current directory.
 
 ### Using the gRPC API
 
@@ -61,14 +61,14 @@ You can interact with the server using any gRPC client. Here are examples using 
 grpcurl -plaintext -d '{
   "username": "alice",
   "schedule_json": "{\"monday\":\"Math 9AM\",\"tuesday\":\"Physics 10AM\"}"
-}' localhost:50051 schedule.ScheduleIndexer/StoreSchedule
+}' localhost:50053 schedule.ScheduleIndexer/StoreSchedule
 ```
 
 **Retrieve a schedule:**
 ```bash
 grpcurl -plaintext -d '{
   "username": "alice"
-}' localhost:50051 schedule.ScheduleIndexer/GetSchedule
+}' localhost:50053 schedule.ScheduleIndexer/GetSchedule
 ```
 
 #### Using your own client
@@ -195,7 +195,7 @@ Binary will be in `target/release/gei-server`
 docker build -t gei-server .
 
 # Run the container
-docker run -p 50051:50051 -e ENCRYPTION_KEY="your-key" gei-server
+docker run -p 50053:50053 -e ENCRYPTION_KEY="your-key" gei-server
 ```
 
 Or use docker-compose:
