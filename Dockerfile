@@ -24,7 +24,8 @@ COPY src/ src/
 RUN cargo build --release --bin gei-server
 
 # Stage 2: Runtime stage
-FROM debian:bookworm-slim
+# FROM debian:bookworm-slim as runner
+FROM gcr.io/distroless/cc-debian12 AS runner
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
@@ -46,8 +47,12 @@ WORKDIR /home/gei
 COPY --from=builder /app/target/release/gei-server /usr/local/bin/gei-server
 
 # Set environment variables
+ENV HOSTNAME=0.0.0.0
 ENV DATABASE_URL=sqlite:///var/lib/gei/schedules.db
+
 ENV RUST_LOG=info
+ENV TERM=xterm-256color
+ENV FORCE_COLOR=1
 
 # Expose gRPC port
 EXPOSE 50053
