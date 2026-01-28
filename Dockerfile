@@ -1,5 +1,5 @@
 # Stage 1: Build stage
-FROM rust:bookworm as builder
+FROM rust:bookworm AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -23,28 +23,22 @@ COPY src/ src/
 # Build the application in release mode
 RUN cargo build --release --bin gei-server
 
+# Create directory structure that will be copied to runtime stage
+RUN mkdir -p /tmp/gei-runtime/var/lib/gei && \
+  mkdir -p /tmp/gei-runtime/home/gei
+
 # Stage 2: Runtime stage
-# FROM debian:bookworm-slim as runner
-FROM gcr.io/distroless/cc-debian12 AS runner
+# Use distroless with nonroot user (uid 65532)
+FROM gcr.io/distroless/cc-debian12:nonroot AS runner
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-  ca-certificates \
-  libssl3 \
-  && rm -rf /var/lib/apt/lists/*
+# Copy directory structure from builder with proper ownership
+COPY --from=builder --chown=65532:65532 /tmp/gei-runtime/var/lib/gei /var/lib/gei
+COPY --from=builder --chown=65532:65532 /tmp/gei-runtime/home/gei /home/gei
 
-# Create a non-root user
-RUN useradd -m -u 1001 -s /bin/bash gei
-
-# Create directory for database
-RUN mkdir -p /var/lib/gei && chown gei:gei /var/lib/gei
-
-# Switch to non-root user
-USER gei
 WORKDIR /home/gei
 
-# Copy the binary from builder
-COPY --from=builder /app/target/release/gei-server /usr/local/bin/gei-server
+# Copy the binary from builder with proper ownership
+COPY --from=builder --chown=65532:65532 /app/target/release/gei-server /usr/local/bin/gei-server
 
 # Set environment variables
 ENV HOSTNAME=0.0.0.0
@@ -57,9 +51,9 @@ ENV FORCE_COLOR=1
 # Expose gRPC port
 EXPOSE 50053
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD pgrep gei-server || exit 1
+# Health check (note: distroless doesn't have shell, so health checks are limited)
+# HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+#   CMD pgrep gei-server || exit 1
 
 # Run the server
 CMD ["gei-server"]
