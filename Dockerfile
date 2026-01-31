@@ -41,10 +41,9 @@ WORKDIR /home/gei
 COPY --from=builder --chown=65532:65532 /app/target/release/gei-server /usr/local/bin/gei-server
 
 # Set environment variables
-ENV HOSTNAME=0.0.0.0
 ENV DATABASE_URL=sqlite:///var/lib/gei/schedules.db
 
-ENV RUST_LOG=info
+ENV RUST_LOG=trace
 ENV TERM=xterm-256color
 ENV FORCE_COLOR=1
 
