@@ -596,6 +596,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "console",
+ "log",
  "prost",
  "serde",
  "serde_json",

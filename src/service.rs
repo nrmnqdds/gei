@@ -1,6 +1,7 @@
 use anyhow::Result;
 use gei::crypto::{decrypt_data, encrypt_data};
 use gei::db::Database;
+use log::info;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
@@ -34,6 +35,8 @@ impl ScheduleIndexer for ScheduleIndexerService {
         let req = request.into_inner();
         let username = req.username;
         let schedule_json = req.schedule_json;
+
+        info!("Received store_schedule request for user: {}", username);
 
         // Validate inputs
         if username.is_empty() {
