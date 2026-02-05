@@ -60,8 +60,8 @@ impl Database {
         .bind(schedule)
         .bind(timestamp)
         .execute(&self.pool)
-        .await
-        .context("Failed to store schedule")?;
+        .await?;
+        // .context("Failed to store schedule")?;
 
         Ok(())
     }
@@ -75,8 +75,8 @@ impl Database {
         )
         .bind(username)
         .fetch_optional(&self.pool)
-        .await
-        .context("Failed to retrieve schedule")?;
+        .await?;
+        // .context("Failed to retrieve schedule")?;
 
         Ok(result.map(|row| row.get::<Vec<u8>, _>("schedule")))
     }
