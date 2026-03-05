@@ -8,6 +8,7 @@ A simple gRPC-based schedule indexer with built-in encryption and SQLite storage
 - 🔐 **Secure Encryption** - AES-256-GCM encryption for all stored data
 - 💾 **SQLite Storage** - Simple, reliable persistence
 - 📝 **JSON Support** - Store complex schedule data as JSON
+- 🔑 **Admin Authentication** - Protect write operations with admin key
 
 ## Architecture
 
@@ -42,7 +43,22 @@ cargo build --release
 
 ## Quick Start
 
-### Start the Server
+### 1. Configure Environment
+
+Create a `.env` file (or copy `.env.example`):
+
+```env
+DATABASE_URL=sqlite://schedules.db
+ENCRYPTION_KEY=your-encryption-key-here
+ADMIN_KEY=your-admin-key-here
+```
+
+Generate a secure admin key:
+```bash
+openssl rand -base64 32
+```
+
+### 2. Start the Server
 
 ```bash
 cargo run --bin gei-server
@@ -56,15 +72,17 @@ You can interact with the server using any gRPC client. Here are examples using 
 
 #### Using grpcurl
 
-**Store a schedule:**
+**Store a schedule (requires admin key):**
 ```bash
-grpcurl -plaintext -d '{
-  "username": "alice",
-  "schedule_json": "{\"monday\":\"Math 9AM\",\"tuesday\":\"Physics 10AM\"}"
-}' localhost:50053 schedule.ScheduleIndexer/StoreSchedule
+grpcurl -plaintext \
+  -H "admin-key: your-admin-key" \
+  -d '{
+    "username": "alice",
+    "schedule_json": "{\"monday\":\"Math 9AM\",\"tuesday\":\"Physics 10AM\"}"
+  }' localhost:50053 schedule.ScheduleIndexer/StoreSchedule
 ```
 
-**Retrieve a schedule:**
+**Retrieve a schedule (no auth required):**
 ```bash
 grpcurl -plaintext -d '{
   "username": "alice"
@@ -79,10 +97,13 @@ See `proto/schedule.proto` for the service definition and implement your client 
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | SQLite database path | `sqlite://schedules.db` |
-| `ENCRYPTION_KEY` | Custom encryption key | Auto-generated |
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `DATABASE_URL` | SQLite database path | `sqlite://schedules.db` | No |
+| `ENCRYPTION_KEY` | Custom encryption key | Auto-generated | No |
+| `ADMIN_KEY` | Admin key for write operations | None | Yes* |
+
+*Required for `StoreSchedule` operations
 
 ### Examples
 
@@ -111,17 +132,28 @@ service ScheduleIndexer {
 
 Stores or updates a user's schedule with automatic encryption.
 
+**Authentication:** Requires `admin-key` in request metadata.
+
 **Request:**
 - `username` (string): Unique identifier for the user
 - `schedule_json` (string): Schedule data in JSON format
+
+**Metadata:**
+- `admin-key` (string): Admin authentication key
 
 **Response:**
 - `success` (bool): Operation status
 - `message` (string): Success/error message
 
+**Errors:**
+- `UNAUTHENTICATED`: Admin key not provided
+- `PERMISSION_DENIED`: Invalid admin key
+
 ### GetSchedule
 
 Retrieves and decrypts a user's schedule.
+
+**Authentication:** None required (public read access).
 
 **Request:**
 - `username` (string): Username to retrieve
@@ -132,6 +164,25 @@ Retrieves and decrypts a user's schedule.
 - `message` (string): Error message if failed
 
 ## Security
+
+### Admin Authentication
+
+Write operations (`StoreSchedule`) require admin authentication to prevent unauthorized database modifications:
+
+- Admin key must be sent in the `admin-key` metadata header
+- Read operations (`GetSchedule`) remain publicly accessible
+- See `QUICKSTART_ADMIN.md` for quick setup guide
+- See `ADMIN_AUTH.md` for complete documentation and examples
+
+**Quick example:**
+```bash
+# Test with example client
+export ADMIN_KEY="your-admin-key"
+cargo run --example client_with_admin
+
+# Or run the test script
+./test_admin_auth.sh
+```
 
 ### Encryption
 
@@ -146,14 +197,21 @@ Retrieves and decrypts a user's schedule.
    export ENCRYPTION_KEY="your-secure-random-key"
    ```
 
-2. **Protect your database file:**
+2. **Always set a strong admin key:**
+   ```bash
+   export ADMIN_KEY="$(openssl rand -base64 32)"
+   ```
+
+3. **Protect your database file:**
    ```bash
    chmod 600 schedules.db
    ```
 
-3. **Use TLS for gRPC in production**
+4. **Use TLS for gRPC in production**
 
-4. **Rotate encryption keys periodically**
+5. **Rotate encryption keys periodically**
+
+6. **Never commit `.env` to version control**
 
 ## Development
 
@@ -162,16 +220,21 @@ Retrieves and decrypts a user's schedule.
 ```
 gei/
 ├── proto/
-│   └── schedule.proto      # gRPC service definition
+│   └── schedule.proto         # gRPC service definition
 ├── src/
-│   ├── crypto.rs           # Encryption/decryption logic
-│   ├── db.rs               # SQLite database operations
-│   ├── service.rs          # gRPC service implementation
-│   ├── server.rs           # Server binary
-│   └── lib.rs              # Library module
-├── build.rs                # Protobuf compilation
-├── Cargo.toml              # Dependencies
-└── README.md               # This file
+│   ├── crypto.rs              # Encryption/decryption logic
+│   ├── db.rs                  # SQLite database operations
+│   ├── service.rs             # gRPC service implementation
+│   ├── server.rs              # Server binary
+│   └── lib.rs                 # Library module
+├── examples/
+│   └── client_with_admin.rs   # Example client with admin auth
+├── build.rs                   # Protobuf compilation
+├── Cargo.toml                 # Dependencies
+├── ADMIN_AUTH.md              # Admin auth documentation
+├── QUICKSTART_ADMIN.md        # Quick setup guide
+├── test_admin_auth.sh         # Test script for admin auth
+└── README.md                  # This file
 ```
 
 ### Running Tests

@@ -24,6 +24,27 @@ impl ScheduleIndexerService {
     pub fn new(db: Arc<Database>) -> Self {
         Self { db }
     }
+
+    /// Verify admin key from request metadata
+    fn verify_admin_key(&self, request: &Request<StoreScheduleRequest>) -> Result<(), Status> {
+        let admin_key =
+            std::env::var("ADMIN_KEY").map_err(|_| Status::internal("Admin key not configured"))?;
+
+        let metadata = request.metadata();
+
+        // Check for admin key in metadata (sent as "admin-key" header)
+        let provided_key = metadata
+            .get("admin-key")
+            .ok_or_else(|| Status::unauthenticated("Admin key required for write operations"))?
+            .to_str()
+            .map_err(|_| Status::invalid_argument("Invalid admin key format"))?;
+
+        if provided_key != admin_key {
+            return Err(Status::permission_denied("Invalid admin key"));
+        }
+
+        Ok(())
+    }
 }
 
 #[tonic::async_trait]
@@ -32,6 +53,9 @@ impl ScheduleIndexer for ScheduleIndexerService {
         &self,
         request: Request<StoreScheduleRequest>,
     ) -> Result<Response<StoreScheduleResponse>, Status> {
+        // Verify admin authentication before allowing write
+        self.verify_admin_key(&request)?;
+
         let req = request.into_inner();
         let username = req.username;
         let schedule_json = req.schedule_json;

@@ -5,6 +5,7 @@ use tonic::transport::Server;
 
 mod service;
 
+use dotenvy::dotenv;
 use gei::crypto;
 use gei::db;
 use service::schedule::schedule_indexer_server::ScheduleIndexerServer;
@@ -12,6 +13,7 @@ use service::ScheduleIndexerService;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenv().ok();
     // Configuration
     let addr = "0.0.0.0:50053".parse()?;
     let database_url =

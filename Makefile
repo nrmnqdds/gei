@@ -70,3 +70,7 @@ install: build-release
 	@cargo install --path .
 	@echo "✅ Installation complete"
 	@echo "You can now run: gei-server"
+
+run:
+	@echo "🚀 Running GEI Server..."
+	@RUST_LOG=trace cargo run --bin gei-server
