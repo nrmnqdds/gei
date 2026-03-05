@@ -596,6 +596,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "console",
+ "dotenvy",
  "log",
  "prost",
  "serde",
